@@ -1,0 +1,89 @@
+{
+  "source": {
+    "path": "data/raw/telco.csv",
+    "sha256": "16320c9c1ec72448db59aa0a26a0b95401046bef5d02fd3aeb906448e3055e91"
+  },
+  "environment": {
+    "python": "3.12.10",
+    "pandas": "3.1.0"
+  },
+  "shape": {
+    "rows": 7043,
+    "columns": 21
+  },
+  "dtypes": {
+    "customerID": "str",
+    "gender": "str",
+    "SeniorCitizen": "int64",
+    "Partner": "str",
+    "Dependents": "str",
+    "tenure": "int64",
+    "PhoneService": "str",
+    "MultipleLines": "str",
+    "InternetService": "str",
+    "OnlineSecurity": "str",
+    "OnlineBackup": "str",
+    "DeviceProtection": "str",
+    "TechSupport": "str",
+    "StreamingTV": "str",
+    "StreamingMovies": "str",
+    "Contract": "str",
+    "PaperlessBilling": "str",
+    "PaymentMethod": "str",
+    "MonthlyCharges": "float64",
+    "TotalCharges": "str",
+    "Churn": "str"
+  },
+  "target_counts": {
+    "No": 5174,
+    "Yes": 1869
+  },
+  "target_proportions": {
+    "No": 0.7346301292063041,
+    "Yes": 0.2653698707936959
+  },
+  "duplicate_customer_ids": 0,
+  "missing_values": {
+    "customerID": 0,
+    "gender": 0,
+    "SeniorCitizen": 0,
+    "Partner": 0,
+    "Dependents": 0,
+    "tenure": 0,
+    "PhoneService": 0,
+    "MultipleLines": 0,
+    "InternetService": 0,
+    "OnlineSecurity": 0,
+    "OnlineBackup": 0,
+    "DeviceProtection": 0,
+    "TechSupport": 0,
+    "StreamingTV": 0,
+    "StreamingMovies": 0,
+    "Contract": 0,
+    "PaperlessBilling": 0,
+    "PaymentMethod": 0,
+    "MonthlyCharges": 0,
+    "TotalCharges": 0,
+    "Churn": 0
+  },
+  "empty_or_whitespace_values": {
+    "customerID": 0,
+    "gender": 0,
+    "Partner": 0,
+    "Dependents": 0,
+    "PhoneService": 0,
+    "MultipleLines": 0,
+    "InternetService": 0,
+    "OnlineSecurity": 0,
+    "OnlineBackup": 0,
+    "DeviceProtection": 0,
+    "TechSupport": 0,
+    "StreamingTV": 0,
+    "StreamingMovies": 0,
+    "Contract": 0,
+    "PaperlessBilling": 0,
+    "PaymentMethod": 0,
+    "TotalCharges": 11,
+    "Churn": 0
+  }
+}
