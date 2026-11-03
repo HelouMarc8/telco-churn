@@ -16,11 +16,13 @@ classifiers = [
     
 ]
 dependencies = [
+    "joblib>=1.6.0",
     "pandas>=3.1.0",
     "pip",
     "pytest",
     "python-dotenv",
     "ruff",
+    "scikit-learn>=1.9.1",
 ]
 requires-python = "~=3.12.0"
 
