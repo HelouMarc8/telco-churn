@@ -1,0 +1,18 @@
+{
+  "selected_model": "random_forest",
+  "rule": "highest validation average precision; within 0.01 -> simplest by ['logistic_regression', 'decision_tree', 'random_forest']",
+  "positive_class": "Churn = Yes (1)",
+  "threshold": 0.5,
+  "split_seed": 42,
+  "features": [
+    "tenure",
+    "MonthlyCharges",
+    "TotalCharges",
+    "Contract",
+    "InternetService",
+    "PaymentMethod"
+  ],
+  "evaluated_on": "validation only (test reserved)",
+  "n_train": 4225,
+  "n_valid": 1409
+}

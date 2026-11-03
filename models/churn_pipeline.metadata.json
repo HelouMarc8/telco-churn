@@ -1,0 +1,106 @@
+{
+  "created_at_utc": "2026-11-03T10:20:56+00:00",
+  "artifact": {
+    "path": "models/churn_pipeline.joblib",
+    "sha256": "6376b75d82f167b95b54ace09c4177df7d6f6db0e5cb5263a7d902d71194d416"
+  },
+  "selected_model": "random_forest",
+  "selection_rule": "highest validation average precision; within 0.01 -> simplest model",
+  "model_class": "RandomForestClassifier",
+  "model_params": {
+    "bootstrap": true,
+    "ccp_alpha": 0.0,
+    "class_weight": null,
+    "criterion": "gini",
+    "max_depth": 8,
+    "max_features": "sqrt",
+    "max_leaf_nodes": null,
+    "max_samples": null,
+    "min_impurity_decrease": 0.0,
+    "min_samples_leaf": 5,
+    "min_samples_split": 2,
+    "min_weight_fraction_leaf": 0.0,
+    "monotonic_cst": null,
+    "n_estimators": 200,
+    "n_jobs": -1,
+    "oob_score": false,
+    "random_state": 42,
+    "verbose": 0,
+    "warm_start": false
+  },
+  "preprocessing": {
+    "numeric_imputer": "median",
+    "numeric_scaler": "StandardScaler",
+    "categorical_imputer": "most_frequent",
+    "categorical_encoder": "OneHotEncoder",
+    "unknown_category_policy": "ignore",
+    "total_charges_parsing": "whitespace-only -> NaN (then imputed); other non-numeric text raises ValueError. Done before the pipeline."
+  },
+  "feature_roles": {
+    "numeric": [
+      "tenure",
+      "MonthlyCharges",
+      "TotalCharges"
+    ],
+    "categorical": [
+      "Contract",
+      "InternetService",
+      "PaymentMethod"
+    ],
+    "identifier_not_a_feature": "customerID",
+    "target_not_a_feature": "Churn"
+  },
+  "input_schema": {
+    "tenure": "number",
+    "MonthlyCharges": "number",
+    "TotalCharges": "float (blank allowed)",
+    "Contract": "string",
+    "InternetService": "string",
+    "PaymentMethod": "string"
+  },
+  "positive_class": "Churn = Yes -> 1",
+  "decision_threshold": 0.5,
+  "validation_metrics": {
+    "average_precision": 0.667083558967912,
+    "precision": 0.6510791366906474,
+    "recall": 0.4839572192513369,
+    "f1": 0.5552147239263804,
+    "accuracy": 0.794180269694819,
+    "tn": 938,
+    "fp": 97,
+    "fn": 193,
+    "tp": 181
+  },
+  "fit_seconds": 0.2819,
+  "comparison_table": "reports/model_comparison.csv",
+  "data": {
+    "source_path": "data/raw/telco.csv",
+    "source_sha256": "16320c9c1ec72448db59aa0a26a0b95401046bef5d02fd3aeb906448e3055e91",
+    "rows": 7043
+  },
+  "split": {
+    "seed": 42,
+    "method": "stratified on Churn, 60/20/20 train/valid/test",
+    "sizes": {
+      "train": 4225,
+      "valid": 1409,
+      "test": 1409
+    },
+    "allocation_file": "models/split_allocation.csv",
+    "allocation_sha256": "a981175e5fa0ef378bc7cea8b18f5db669157ad01a9f532239e30514bc791f16",
+    "test_set_evaluated": false
+  },
+  "code": {
+    "commit": "5bcbc9ac40ca9914b8ce6936f92fa2d8c507e6de",
+    "uncommitted_changes": true
+  },
+  "command": "python -m telco_churn.training",
+  "environment": {
+    "python": "3.12.10",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "scikit-learn": "1.9.1",
+    "pandas": "3.1.0",
+    "numpy": "2.5.4",
+    "joblib": "1.6.0"
+  }
+}
