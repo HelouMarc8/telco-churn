@@ -1,18 +1,3 @@
-"""TP02 section 4 - training entry point: compare, select, save the fitted pipeline.
-
-Run from the project root:
-    uv run python -m telco_churn.training
-
-Writes:
-    reports/model_comparison.csv, reports/model_selection.json   (comparison, section 3)
-    models/churn_pipeline.joblib            fitted preprocessing + classifier, together
-    models/churn_pipeline.metadata.json     reproduction record for that artifact
-    models/split_allocation.csv             customerID -> train/valid/test
-    models/reference_batch.csv              a few validation customers, features only (no Churn)
-    models/reference_predictions.csv        in-memory predictions on that batch, for reload check
-
-The test set is not evaluated here.
-"""
 from datetime import datetime, timezone
 import json
 from importlib.metadata import version
@@ -53,7 +38,6 @@ REFERENCE_SIZE = 10
 
 
 def git_identity():
-    """Commit hash and whether uncommitted changes exist (None if git is unavailable)."""
     try:
         commit = subprocess.run(
             ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
@@ -75,7 +59,6 @@ def environment():
 
 
 def preprocessing_settings(pipeline):
-    """Read the settings from the pipeline object itself, so the record cannot drift from it."""
     p = pipeline.get_params()
     return {
         "numeric_imputer": p["preprocessor__num__imputer__strategy"],
@@ -89,7 +72,6 @@ def preprocessing_settings(pipeline):
 
 
 def save_reference(pipeline, valid_df):
-    """Save a small feature-only batch and its in-memory predictions for the reload check."""
     batch = valid_df[["customerID", *features]].head(REFERENCE_SIZE)
     batch.to_csv(REFERENCE_BATCH, index=False)
     scores = positive_scores(pipeline, batch[features])
@@ -111,7 +93,6 @@ def main():
     selected = select_model(results)
     save_comparison(results, selected, len(train_df), len(valid_df))
 
-    # The selected candidate is already fitted on train only; save it as-is (no refit).
     pipeline = fitted[selected]
 
     MODEL_DIR.mkdir(exist_ok=True)

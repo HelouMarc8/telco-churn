@@ -1,13 +1,3 @@
-"""TP03 section 4 - inference only, through the registry alias. Never calls fit.
-
-Run in a NEW terminal from the project root (server running):
-    uv run python -m telco_churn.predict_registered --input models/reference_batch.csv --check
-
---input   CSV with the six feature columns (customerID optional, Churn not needed)
---check   compare with the predictions the source run made in memory before logging
-
-Only load models from your own trusted tracking server: loading unpickles code.
-"""
 import argparse
 from pathlib import Path
 import tempfile
@@ -25,7 +15,7 @@ MODEL_URI = f"models:/{REGISTERED_MODEL}@{ALIAS}"
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description="Predict churn with the registered model alias.")
     parser.add_argument("--input", default="models/reference_batch.csv")
     parser.add_argument("--check", action="store_true",
                         help="compare with the source run's reference predictions")
@@ -37,9 +27,9 @@ def main():
     run = client.get_run(version.run_id)
     threshold = float(run.data.params["threshold"])
 
-    pipeline = mlflow.sklearn.load_model(MODEL_URI)  # complete fitted pipeline; no fit here
+    pipeline = mlflow.sklearn.load_model(MODEL_URI)
     new_customers = pd.read_csv(args.input)
-    predictions = predict(pipeline, new_customers, threshold)  # same input parsing as TP02
+    predictions = predict(pipeline, new_customers, threshold)
 
     print(f"Loaded {MODEL_URI} -> version {version.version} "
           f"(source run {version.run_id}, {run.info.run_name}, threshold {threshold})")

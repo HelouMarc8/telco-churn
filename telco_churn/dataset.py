@@ -19,7 +19,6 @@ def parse_total_charges(series):
 
 
 def load_data(path=DATA_PATH):
-    """Read the original CSV (never modified on disk) and parse TotalCharges in memory."""
     df = pd.read_csv(path)
     df["TotalCharges"] = parse_total_charges(df["TotalCharges"])
     return df
@@ -43,7 +42,6 @@ def split_data(df, seed=SEED):
 
 
 def check_disjoint_splits(train_df, valid_df, test_df, n_customers):
-    """Fail loudly if a customer appears in two splits or one is missing."""
     ids = [set(d["customerID"]) for d in (train_df, valid_df, test_df)]
     if ids[0] & ids[1] or ids[0] & ids[2] or ids[1] & ids[2]:
         raise ValueError("customerID overlap between splits")
@@ -52,7 +50,6 @@ def check_disjoint_splits(train_df, valid_df, test_df, n_customers):
 
 
 def split_allocation(train_df, valid_df, test_df):
-    """customerID -> split name, to record exactly which customers were used where."""
     return pd.concat([
         pd.DataFrame({"customerID": d["customerID"], "split": name})
         for name, d in (("train", train_df), ("valid", valid_df), ("test", test_df))

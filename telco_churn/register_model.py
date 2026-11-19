@@ -1,12 +1,3 @@
-"""TP03 section 4 - register the selected logged pipeline and point the alias at it.
-
-Run from the project root (server running), after run_comparison:
-    uv run python -m telco_churn.register_model                 # run marked selected in the CSV
-    uv run python -m telco_churn.register_model --run-id <id>   # explicit run
-
-Registers the run's logged model as `telco-churn` and sets alias `candidate` on the
-returned version (the version number is read back, never assumed to be 1).
-"""
 import argparse
 import json
 from pathlib import Path
@@ -30,7 +21,7 @@ def selected_run_id(comparison=COMPARISON):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(description="Register the selected run's model and set the alias.")
     parser.add_argument("--run-id", help="source run (default: selected run in the CSV)")
     args = parser.parse_args()
 

@@ -1,13 +1,3 @@
-"""TP02 section 4 - inference only. Loads the saved pipeline; never calls fit.
-
-Run from the project root:
-    uv run python -m telco_churn.prediction --input models/reference_batch.csv
-    uv run python -m telco_churn.prediction --input models/reference_batch.csv \
-        --check models/reference_predictions.csv
-
-The input CSV needs the six feature columns (customerID optional, Churn not needed).
-Only load artifacts you trust: joblib files can execute code when loaded.
-"""
 import argparse
 import json
 from pathlib import Path
@@ -28,7 +18,6 @@ def load_model(artifact=ARTIFACT, metadata=METADATA):
 
 
 def prepare_input(df, required):
-    """Boundary validation: missing columns fail visibly; TotalCharges parsed like in training."""
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise ValueError(f"Missing required feature columns: {missing}")

@@ -47,12 +47,12 @@ KEY_PARAMS = {
     "decision_tree": ["max_depth", "criterion", "min_samples_leaf"],
     "random_forest": ["n_estimators", "max_depth", "min_samples_leaf", "max_features"],
 }
-REFERENCE_SIZE = 10  # validation customers used for the reload agreement check
+REFERENCE_SIZE = 10
 CM_LABELS = [0, 1]  
 
 def confusion_matrix_figure(metrics, title):
     matrix = [[metrics["tn"], metrics["fp"]], [metrics["fn"], metrics["tp"]]]
-    fig = Figure(figsize=(4.5, 4))  # no pyplot: no GUI backend, nothing to close
+    fig = Figure(figsize=(4.5, 4))
     ax = fig.subplots()
     ConfusionMatrixDisplay(
         confusion_matrix=np.array(matrix),
@@ -112,9 +112,9 @@ def run_candidate(name, classifier, data, context, allocation_path):
         mlflow.log_input(train_ds, context="training")
         mlflow.log_input(valid_ds, context="validation")
 
-        pipeline = build_pipeline(classifier)  # fresh, unfitted
+        pipeline = build_pipeline(classifier)
         start = time.perf_counter()
-        pipeline.fit(X_train, y_train)  # training data only
+        pipeline.fit(X_train, y_train)
         fit_seconds = time.perf_counter() - start
 
         metrics = evaluate_model(pipeline, X_valid, y_valid, threshold=THRESHOLD)
@@ -136,10 +136,8 @@ def run_candidate(name, classifier, data, context, allocation_path):
             "validation_confusion_matrix.json",
         )
         mlflow.log_dict(build_provenance(name, classifier, context), "provenance.json")
-        mlflow.log_artifact(str(allocation_path))  # exact customer -> split record
+        mlflow.log_artifact(str(allocation_path))
 
-        # Complete fitted preprocessing + classifier, recorded with MLflow's model API.
-        # tenure as float in the example: the inferred schema then allows a missing tenure.
         example = X_train.head(3).astype({"tenure": "float64"})
         model_info = mlflow.sklearn.log_model(
             sk_model=pipeline,
@@ -149,8 +147,6 @@ def run_candidate(name, classifier, data, context, allocation_path):
         )
         mlflow.set_tag("logged_model_uri", model_info.model_uri)
 
-        # Predictions of THIS in-memory pipeline on a few validation customers (no labels),
-        # so a later fresh-process load can be compared against them.
         scores = positive_scores(pipeline, reference_batch[features])
         reference_predictions = reference_batch[["customerID"]].assign(
             churn_probability=scores, churn_prediction=(scores >= THRESHOLD).astype(int)
@@ -177,7 +173,6 @@ def main():
     X_train, y_train = train_df[features], make_target(train_df)
     X_valid, y_valid = valid_df[features], make_target(valid_df)
 
-    # Dataset records describe the data used (name, digest, schema); they do not store it.
     described = ["customerID", *features, "Churn"]
     train_ds = mlflow.data.from_pandas(train_df[described], name="telco_train", targets="Churn")
     valid_ds = mlflow.data.from_pandas(valid_df[described], name="telco_valid", targets="Churn")

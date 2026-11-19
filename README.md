@@ -59,3 +59,68 @@ Creating  a churn prediction model.
 
 --------
 
+
+## Experiment tracking with MLflow (TP03)
+
+All commands run from the project root (`telco-churn/`). The raw CSV must be at
+`data/raw/telco.csv` (SHA-256 `16320c9c1ec72448db59aa0a26a0b95401046bef5d02fd3aeb906448e3055e91`).
+
+### 1. Start the tracking server (terminal 1, keep it running)
+
+```bash
+uv sync --locked
+uv run mlflow server --host 127.0.0.1 --port 5001 \
+  --backend-store-uri sqlite:///mlflow.db --artifacts-destination ./mlartifacts
+```
+
+UI: <http://127.0.0.1:5001>. Port 5001 is used because port 5000 is taken by macOS Control
+Center (AirPlay Receiver). Always restart the server from this directory with the same options,
+otherwise it opens a different, empty store.
+
+### 2. Tracked training, comparison and registration (terminal 2)
+
+Commit your code first: every run records the Git commit and whether there were uncommitted
+changes.
+
+```bash
+uv run python -m telco_churn.tracked_training
+uv run python -m telco_churn.run_comparison --override logistic_regression
+uv run python -m telco_churn.register_model
+```
+
+- `tracked_training`: one run per candidate in experiment `telco-churn-tp03`, with parameters,
+  validation metrics, Git/data tags, confusion matrix, provenance JSON, split allocation,
+  train/validation dataset records and the complete fitted pipeline (`mlflow.sklearn.log_model`).
+- `run_comparison`: exports the clean runs of the current commit to
+  `reports/tp03_comparison.csv` and applies the selection rule (`--override` records a documented
+  choice different from the rule's pick).
+- `register_model`: registers the selected run's model as `telco-churn`, points alias
+  `candidate` at the new version and writes `reports/tp03_handover.json`.
+
+### 3. Inference through the registry alias (new terminal, server running)
+
+```bash
+uv run python -m telco_churn.predict_registered --input models/reference_batch.csv --check
+```
+
+Loads `models:/telco-churn@candidate` without training, applies the same input parsing as TP02,
+and with `--check` compares against the predictions the source run made before logging. The input
+CSV needs `tenure`, `MonthlyCharges`, `TotalCharges`, `Contract`, `InternetService`,
+`PaymentMethod` (`customerID` optional, `Churn` not needed). Only load models from your own
+trusted server: loading unpickles code.
+
+### Where tracking data are stored and how to recover the selected model
+
+| Location | Contents |
+|---|---|
+| `mlflow.db` (SQLite backend store) | Experiments, runs, parameters, metrics, tags, dataset records, registry (`telco-churn` versions and aliases) |
+| `mlartifacts/` (artifact store) | Logged files: fitted pipelines (`model.pkl`, `MLmodel`, requirements), confusion matrices, provenance, allocations |
+
+Both are local to this machine and excluded from Git (`.gitignore`). To recover the selected
+model: start the server as above, then load `models:/telco-churn@candidate`, or the fixed version
+`models:/telco-churn/1` for a reproducible handover (the alias can be moved later).
+
+**Limitation:** run IDs and `models:/` URIs only resolve against this server and these two
+storage locations. A colleague on another machine needs a copy of both `mlflow.db` and
+`mlartifacts/` (or a shared team server), the raw CSV, this repository at the recorded commit and
+an environment from `uv.lock`.

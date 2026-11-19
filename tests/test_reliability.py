@@ -1,8 +1,3 @@
-"""TP02 section 5 - focused reliability checks on the saved, selected pipeline.
-
-Prerequisite (creates the artifact):  uv run python -m telco_churn.training
-Run from the project root:             uv run pytest tests/test_reliability.py -v
-"""
 import copy
 from pathlib import Path
 import subprocess
@@ -21,7 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.fixture(autouse=True)
 def run_from_project_root(monkeypatch):
-    monkeypatch.chdir(PROJECT_ROOT)  # all project paths are relative to the root
+    monkeypatch.chdir(PROJECT_ROOT)
 
 
 @pytest.fixture(scope="module")
@@ -34,7 +29,7 @@ def splits():
 def saved():
     if not (PROJECT_ROOT / ARTIFACT).exists():
         pytest.skip("No artifact: run `uv run python -m telco_churn.training` first")
-    return load_model(PROJECT_ROOT / ARTIFACT, PROJECT_ROOT / METADATA)  # (pipeline, metadata)
+    return load_model(PROJECT_ROOT / ARTIFACT, PROJECT_ROOT / METADATA)
 
 
 def numeric_imputer(pipeline):
@@ -46,7 +41,6 @@ def one_valid_customer(splits):
     return valid_df[features].head(1).reset_index(drop=True)
 
 
-# 1. Customer IDs do not overlap across train, validation and test ---------------------------
 def test_customer_ids_disjoint_and_complete(splits):
     df, train_df, valid_df, test_df = splits
     tr, va, te = (set(d["customerID"]) for d in (train_df, valid_df, test_df))
@@ -61,7 +55,6 @@ def test_saved_allocation_matches_current_split(splits):
         assert (saved_alloc.loc[d["customerID"]] == name).all()
 
 
-# 2. Learned statistics come from TRAINING data, not the full dataset -------------------------
 def test_imputer_medians_are_training_medians(splits, saved):
     df, train_df, _, _ = splits
     pipeline, _ = saved
@@ -73,7 +66,6 @@ def test_imputer_medians_are_training_medians(splits, saved):
     print("\nlearned :", dict(zip(numeric_features, learned)))
     print("train   :", dict(zip(numeric_features, train_medians)))
     print("full    :", dict(zip(numeric_features, full_medians)))
-    # Evidence that the comparison is meaningful: train and full-data medians actually differ.
     assert not np.allclose(train_medians, full_medians)
 
 
@@ -85,7 +77,6 @@ def test_scaler_mean_is_training_mean(splits, saved):
     np.testing.assert_allclose(num.named_steps["scaler"].mean_, imputed_train.mean().to_numpy())
 
 
-# 3. Predicting does not refit or change learned statistics -----------------------------------
 def test_predict_does_not_change_learned_state(splits, saved):
     _, _, valid_df, _ = splits
     pipeline, metadata = saved
@@ -103,13 +94,12 @@ def test_predict_does_not_change_learned_state(splits, saved):
         np.testing.assert_array_equal(a, b)
 
 
-# 4a. Permitted missing numeric input -> training median (documented policy) ------------------
 def test_blank_total_charges_is_imputed_with_training_median(splits, saved):
     _, train_df, _, _ = splits
     pipeline, metadata = saved
     customer = one_valid_customer(splits)
 
-    blank = customer.assign(TotalCharges=" ")  # as it appears in the raw CSV
+    blank = customer.assign(TotalCharges=" ")
     as_median = customer.assign(TotalCharges=train_df["TotalCharges"].median())
 
     p_blank = predict(pipeline, blank, metadata["decision_threshold"])["churn_probability"]
@@ -124,7 +114,6 @@ def test_malformed_total_charges_fails_visibly(splits, saved):
         predict(pipeline, bad, metadata["decision_threshold"])
 
 
-# 4b. Unseen category -> encoded as all zeros, no crash (documented policy) -------------------
 def test_unseen_category_is_ignored_not_crashing(splits, saved):
     pipeline, metadata = saved
     unseen = one_valid_customer(splits).assign(InternetService="Satellite")
@@ -138,10 +127,8 @@ def test_unseen_category_is_ignored_not_crashing(splits, saved):
 
     out = predict(pipeline, unseen, metadata["decision_threshold"])
     assert 0.0 <= out["churn_probability"].iloc[0] <= 1.0
-    # Note: handling an unseen category is not evidence the prediction is reliable for it.
 
 
-# 5. Missing required feature -> visible failure ----------------------------------------------
 @pytest.mark.parametrize("dropped", numeric_features + categorical_features)
 def test_missing_required_feature_raises(splits, saved, dropped):
     pipeline, metadata = saved
@@ -151,14 +138,12 @@ def test_missing_required_feature_raises(splits, saved, dropped):
 
 
 def test_pipeline_itself_also_rejects_missing_column(splits, saved):
-    """Even bypassing our boundary check, sklearn refuses rather than predicting silently."""
     pipeline, _ = saved
     incomplete = one_valid_customer(splits).drop(columns="Contract")
     with pytest.raises(ValueError):
         pipeline.predict_proba(incomplete)
 
 
-# 6. Save/reload preserves predictions; inference needs no labels or training -----------------
 def test_reference_batch_has_no_labels():
     batch = pd.read_csv("models/reference_batch.csv")
     assert "Churn" not in batch.columns

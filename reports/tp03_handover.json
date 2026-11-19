@@ -1,0 +1,16 @@
+{
+  "source_run_id": "973f0bca88fc43bc904e8842c698e118",
+  "run_name": "logistic-C1",
+  "logged_model_uri": "models:/m-9fd84ad6a2ef4206aaf9cfd976653d8e",
+  "registered_model": "telco-churn",
+  "registered_version": 1,
+  "alias": "candidate",
+  "alias_uri": "models:/telco-churn@candidate",
+  "version_uri": "models:/telco-churn/1",
+  "git_commit": "0aec61fc8286c4b1963721a736be4522f44eff00",
+  "git_uncommitted_changes": "False",
+  "data_sha256": "16320c9c1ec72448db59aa0a26a0b95401046bef5d02fd3aeb906448e3055e91",
+  "split_allocation_sha256": "a981175e5fa0ef378bc7cea8b18f5db669157ad01a9f532239e30514bc791f16",
+  "threshold": 0.5,
+  "val_average_precision": 0.6474664703085159
+}
