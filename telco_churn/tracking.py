@@ -2,6 +2,8 @@ import mlflow
 
 TRACKING_URI = "http://127.0.0.1:5001"
 EXPERIMENT_NAME = "telco-churn-tp03"
+REGISTERED_MODEL = "telco-churn"
+ALIAS = "candidate"
 
 
 def connect():

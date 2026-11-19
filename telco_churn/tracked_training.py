@@ -5,6 +5,7 @@ import time
 
 from matplotlib.figure import Figure
 import mlflow
+import mlflow.sklearn
 import numpy as np
 from sklearn.metrics import ConfusionMatrixDisplay
 
@@ -24,7 +25,12 @@ from telco_churn.ml_preprocessing import (
     features,
     numeric_features,
 )
-from telco_churn.model_comparison import THRESHOLD, evaluate_model, make_candidates
+from telco_churn.model_comparison import (
+    THRESHOLD,
+    evaluate_model,
+    make_candidates,
+    positive_scores,
+)
 from telco_churn.tracking import connect
 from telco_churn.training import environment, git_identity
 
@@ -41,6 +47,7 @@ KEY_PARAMS = {
     "decision_tree": ["max_depth", "criterion", "min_samples_leaf"],
     "random_forest": ["n_estimators", "max_depth", "min_samples_leaf", "max_features"],
 }
+REFERENCE_SIZE = 10  # validation customers used for the reload agreement check
 CM_LABELS = [0, 1]  
 
 def confusion_matrix_figure(metrics, title):
@@ -84,7 +91,7 @@ def build_provenance(name, classifier, context):
 
 
 def run_candidate(name, classifier, data, context, allocation_path):
-    X_train, y_train, X_valid, y_valid, train_ds, valid_ds = data
+    X_train, y_train, X_valid, y_valid, train_ds, valid_ds, reference_batch = data
     with mlflow.start_run(run_name=RUN_NAMES[name]) as run:
         params = classifier.get_params()
         mlflow.log_params({
@@ -131,9 +138,32 @@ def run_candidate(name, classifier, data, context, allocation_path):
         mlflow.log_dict(build_provenance(name, classifier, context), "provenance.json")
         mlflow.log_artifact(str(allocation_path))  # exact customer -> split record
 
+        # Complete fitted preprocessing + classifier, recorded with MLflow's model API.
+        # tenure as float in the example: the inferred schema then allows a missing tenure.
+        example = X_train.head(3).astype({"tenure": "float64"})
+        model_info = mlflow.sklearn.log_model(
+            sk_model=pipeline,
+            name="churn_pipeline",
+            input_example=example,
+            serialization_format="cloudpickle",
+        )
+        mlflow.set_tag("logged_model_uri", model_info.model_uri)
+
+        # Predictions of THIS in-memory pipeline on a few validation customers (no labels),
+        # so a later fresh-process load can be compared against them.
+        scores = positive_scores(pipeline, reference_batch[features])
+        reference_predictions = reference_batch[["customerID"]].assign(
+            churn_probability=scores, churn_prediction=(scores >= THRESHOLD).astype(int)
+        )
+        mlflow.log_text(reference_batch.to_csv(index=False), "reference/reference_batch.csv")
+        mlflow.log_text(
+            reference_predictions.to_csv(index=False, float_format="%.17g"),
+            "reference/reference_predictions.csv",
+        )
+
         print(f"{RUN_NAMES[name]:<24} run {run.info.run_id}  "
               f"AP={metrics['average_precision']:.3f}  recall={metrics['recall']:.3f}  "
-              f"F1={metrics['f1']:.3f}")
+              f"F1={metrics['f1']:.3f}  model={model_info.model_uri}")
         return run.info.run_id, pipeline
 
 
@@ -169,7 +199,8 @@ def main():
             "environment": environment() | {"mlflow": mlflow.__version__},
         }
 
-        data = (X_train, y_train, X_valid, y_valid, train_ds, valid_ds)
+        reference_batch = valid_df[["customerID", *features]].head(REFERENCE_SIZE)
+        data = (X_train, y_train, X_valid, y_valid, train_ds, valid_ds, reference_batch)
         results = {}
         for name, classifier in make_candidates().items():
             run_id, _pipeline = run_candidate(name, classifier, data, context, allocation_path)
