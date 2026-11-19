@@ -159,3 +159,166 @@ directly at the cause.
 **Fix.** The encoder was restored to `handle_unknown="ignore"` (`git diff` on
 `ml_preprocessing.py` is empty again). Rerun: `uv run pytest -q` → **19 passed, 18 deselected**;
 `uv run pytest -q -m integration` → **18 passed**. The submitted code is the working version.
+
+## 4. Ruff and coverage
+
+### Ruff
+
+Configuration in `pyproject.toml` (existing `line-length = 99` and isort settings preserved):
+
+```toml
+[tool.ruff]
+include = ["pyproject.toml", "telco_churn/**/*.py", "tests/**/*.py"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+```
+
+`E4`/`E7`/`E9`: pycodestyle errors for imports, statements and syntax/IO errors; `F`: Pyflakes
+(undefined names, unused imports/variables, redefinitions); `I`: isort import ordering. The rule
+set is selected explicitly: Ruff 0.17's default set also enabled pyupgrade, flynt and pylint rules,
+which is wider than the agreed scope.
+
+| | Before | After |
+|---|---|---|
+| `ruff check telco_churn tests` | 6 × I001 (import order) | All checks passed |
+| `ruff format --check telco_churn tests` | 14 files would be reformatted | 19 files already formatted |
+
+Fixes were reviewed: an AST comparison shows that every reformatted module has identical code
+apart from import order. After fixing imports, Ruff reported one real finding,
+`F841 Local variable 'y_valid' is assigned to but never used` in `ml_training_script.py`. Ruff's
+suggested fix (delete the assignment) would have hidden the problem; the actual issue was that the
+TP02 milestone-1 script never evaluated its predictions. It now reports validation accuracy and a
+confusion matrix for the two-feature model and the majority baseline (0.783 vs 0.735).
+
+Three TP01/TP02 scripts executed work at import time, which TP04 forbids for importable code:
+`hash_test.py` hashed a hard-coded absolute path on import, `data_inspection.py` read the CSV and
+wrote the report on import, and `ml_training_script.py` trained a model on import. Their work now
+runs only under `if __name__ == "__main__":`, `hash_test.py` uses a path relative to the project,
+and the regenerated inspection report is byte-identical to the previous one.
+
+### Coverage
+
+```bash
+uv run pytest --cov=telco_churn --cov-report=term-missing --cov-report=xml:coverage.xml
+```
+
+First result (19 unit tests): **TOTAL 13 %** (483 statements, 418 missed). Per module:
+`dataset.py` 61 %, `ml_preprocessing.py` 62 %, `prediction.py` 56 %; all command-line and MLflow
+modules (`training.py`, `tracked_training.py`, `register_model.py`, `run_comparison.py`,
+`predict_registered.py`, `tracking.py`, `model_comparison.py`, `data_inspection.py`) 0 %.
+
+The low total is expected: most uncovered statements are entry points that train on the real CSV
+or contact the MLflow server, which the unit suite must not do. Third-party code (scikit-learn,
+pandas, MLflow) is outside the measured scope (`--cov=telco_churn`).
+
+**Uncovered relevant behaviour:** `split_data` and `check_disjoint_splits` in `dataset.py`
+(lines 35–49). They protect against leakage between train, validation and test, yet no unit test
+executed them; only the slow integration test on the real CSV did.
+
+**Proposed and implemented test** (`tests/test_split.py`, 3 tests on 100 synthetic customers):
+the split gives 60/20/20 rows with the churn rate preserved in each part, the same seed gives the
+same customer allocation, and a customer copied into two splits makes `check_disjoint_splits`
+raise. After adding it: `dataset.py` **61 % → 82 %**, total 15 %, 22 tests passed.
+
+**What coverage does and does not tell us.** An executed line only means the tests ran it, not that
+they checked its result: deleting every `assert` from the suite would keep coverage identical. For
+example, `test_one_output_row_per_customer` executes all of `predict`, but would not notice a
+wrong threshold rule; that is caught by a separate assertion in
+`test_churn_probability_is_the_positive_class_column`. Coverage finds untested code; it does not
+prove tested code is correct.
+
+**Still uncovered and worth a test next:** `prediction.check_against_reference` (lines 61–79), the
+reload agreement check. A useful test would write a reference CSV to `tmp_path` and assert that a
+probability changed by more than the tolerance makes it return `False`.
+
+## 5. pre-commit
+
+`.pre-commit-config.yaml` (pinned, Ruff hook version = installed Ruff 0.17.5, lint fixes before
+formatting, Python hooks scoped to `telco_churn/` and `tests/`):
+
+```yaml
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.5
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        types_or: [python, pyi]
+        files: ^(telco_churn|tests)/
+      - id: ruff-format
+        types_or: [python, pyi]
+        files: ^(telco_churn|tests)/
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        files: ^(telco_churn|tests)/|\.(toml|yaml|yml)$
+      - id: end-of-file-fixer
+        files: ^(telco_churn|tests)/|\.(toml|yaml|yml)$
+      - id: check-yaml
+      - id: check-toml
+```
+
+Hooks only see Git-tracked files, so `.venv/`, `mlflow.db` and `mlartifacts/` are never scanned.
+
+```bash
+uv run pre-commit validate-config   # valid
+uv run pre-commit install           # pre-commit installed at .git/hooks/pre-commit
+uv run pre-commit run --all-files   # first run: trailing-whitespace fixed pyproject.toml, then all Passed
+```
+
+**Blocked commit.** `tests/test_split.py` (the new coverage test) was written with correct
+behaviour but bad style: unsorted imports, single quotes, missing spaces
+(`def test_x( customers ):`, `train,valid,test=split_data(...)`). It was staged and committed:
+
+```
+$ git commit -m "TD4: add split leakage tests"
+ruff check...............................................................Failed
+- hook id: ruff-check
+- files were modified by this hook
+Found 1 error (1 fixed, 0 remaining).
+ruff format..............................................................Failed
+- hook id: ruff-format
+- files were modified by this hook
+1 file reformatted
+trim trailing whitespace.................................................Passed
+fix end of files.........................................................Passed
+```
+
+No commit was created (`HEAD` stayed at `22d5a43`). `git diff tests/test_split.py` showed the
+hooks' changes: imports sorted (`check_disjoint_splits, split_data`), double quotes, spaces around
+operators and after commas. The tests still passed (3 passed).
+
+**Successful retry.** After reviewing the diff: `git add tests/test_split.py` and the same commit
+→ all hooks Passed, commit `ee4c4ba`. `--no-verify` was not used.
+
+pytest and full training are deliberately not in the hooks: hooks must stay fast, and the tests
+will run in CI (TP05). Hooks are local and can be skipped (`--no-verify`, or a clone where
+`pre-commit install` was never run), so they cannot replace server-side checks.
+
+## 6. Handover and Quality Gate reflection
+
+The README section "Tests and code quality (TP04)" lists setup (`uv sync --locked`,
+`uv run pre-commit install`) and each command with the kind of issue it detects.
+`.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.coverage`, `coverage.xml` and `htmlcov/` are
+ignored by Git.
+
+| Check | Question it answers | Example from this project |
+|---|---|---|
+| Tests (pytest) | Does the code *behave* as the contract says? | `handle_unknown="error"` made test B fail |
+| Static analysis (Ruff lint) | Is the code suspicious without running it? | Unused `y_valid` (F841) revealed a script that never evaluated its model |
+| Formatting (Ruff format) | Is the code written in one consistent style? | 14 files reformatted, no behaviour change |
+| Coverage | Which code did the tests execute? | Split functions were never executed by unit tests |
+| Quality Gate (policy) | Do the analysis results meet the team's thresholds? | e.g. "no new bugs, coverage on new code ≥ 80 %" |
+
+A Quality Gate is a policy applied to analysis results; analysis can complete successfully while
+the gate fails, and the result depends on the thresholds and the definition of "new code" chosen.
+SonarQube was not run (optional); no SonarQube results are claimed.
+
+**If tests pass, what can still be wrong?** Anything the tests do not assert: a model that is
+valid but useless, a threshold that misses most churners, data drift in production, a bug in an
+untested script, or tests that execute code without checking it. **If a Quality Gate passes, is
+the model useful, fair or secure?** No. The gate checks code against chosen thresholds; it says
+nothing about predictive quality on new customers, fairness across customer groups, data
+privacy, or vulnerabilities in dependencies and pickled models.

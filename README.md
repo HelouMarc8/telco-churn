@@ -124,3 +124,34 @@ model: start the server as above, then load `models:/telco-churn@candidate`, or 
 storage locations. A colleague on another machine needs a copy of both `mlflow.db` and
 `mlartifacts/` (or a shared team server), the raw CSV, this repository at the recorded commit and
 an environment from `uv.lock`.
+
+## Tests and code quality (TP04)
+
+All commands run from the project root.
+
+### Setup (once, after cloning)
+
+```bash
+uv sync --locked
+uv run pre-commit install
+```
+
+`uv sync` installs the runtime and the `dev` group (pytest, pytest-cov, ruff, pre-commit).
+`pre-commit install` activates the Git hooks on your machine; the configuration
+(`.pre-commit-config.yaml`) is versioned, but each clone must install the hooks itself.
+
+### Commands
+
+| Command | Detects |
+|---|---|
+| `uv run pytest -q` | Broken behaviour: input contract, unknown categories/missing values, probability contract, save/reload, split leakage. Fast, synthetic data only, no CSV, no MLflow |
+| `uv run pytest -q -m integration` | TP02 reliability checks on the real CSV and saved artifacts (needs `data/raw/telco.csv` and `models/`) |
+| `uv run ruff check telco_churn tests` | Static issues: syntax errors, undefined or unused names, bad imports, import order (rules E4, E7, E9, F, I) |
+| `uv run ruff format --check telco_churn tests` | Formatting differences (does not change behaviour) |
+| `uv run pytest --cov=telco_churn --cov-report=term-missing --cov-report=xml:coverage.xml` | Which lines the tests execute (not whether they assert the right thing) |
+| `uv run pre-commit run --all-files` | Runs every hook (Ruff check with fixes, Ruff format, whitespace/end-of-file, YAML/TOML syntax) |
+
+Apply fixes with `uv run ruff check --fix telco_churn tests` and `uv run ruff format telco_churn tests`,
+then review `git diff`. When a commit is blocked because a hook modified files, inspect the changes,
+`git add` them and commit again; do not use `--no-verify`. Hooks run locally and can be bypassed, so
+they do not replace CI checks.
