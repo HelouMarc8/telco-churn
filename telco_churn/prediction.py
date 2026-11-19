@@ -30,10 +30,13 @@ def predict(pipeline, df, threshold):
     X = prepare_input(df, list(pipeline.feature_names_in_))
     positive_column = list(pipeline.classes_).index(1)
     scores = pipeline.predict_proba(X)[:, positive_column]
-    out = pd.DataFrame({
-        "churn_probability": scores,
-        "churn_prediction": (scores >= threshold).astype(int),
-    }, index=df.index)
+    out = pd.DataFrame(
+        {
+            "churn_probability": scores,
+            "churn_prediction": (scores >= threshold).astype(int),
+        },
+        index=df.index,
+    )
     if "customerID" in df.columns:
         out.insert(0, "customerID", df["customerID"])
     return out
@@ -42,11 +45,15 @@ def predict(pipeline, df, threshold):
 def check_against_reference(predictions, reference_path):
     reference = pd.read_csv(reference_path)
     same_ids = predictions["customerID"].tolist() == reference["customerID"].tolist()
-    max_diff = float(np.max(np.abs(predictions["churn_probability"] - reference["churn_probability"])))
+    max_diff = float(
+        np.max(np.abs(predictions["churn_probability"] - reference["churn_probability"]))
+    )
     same_classes = bool((predictions["churn_prediction"] == reference["churn_prediction"]).all())
     ok = same_ids and same_classes and max_diff <= TOLERANCE
-    print(f"Reload check: same customers={same_ids}, same classes={same_classes}, "
-          f"max |prob diff|={max_diff:.2e} (tolerance {TOLERANCE}) -> {'PASS' if ok else 'FAIL'}")
+    print(
+        f"Reload check: same customers={same_ids}, same classes={same_classes}, "
+        f"max |prob diff|={max_diff:.2e} (tolerance {TOLERANCE}) -> {'PASS' if ok else 'FAIL'}"
+    )
     return ok
 
 
@@ -61,8 +68,10 @@ def main():
     new_customers = pd.read_csv(args.input)
     predictions = predict(pipeline, new_customers, metadata["decision_threshold"])
 
-    print(f"Model: {metadata['selected_model']} (artifact sha256 "
-          f"{metadata['artifact']['sha256'][:12]}..., threshold {metadata['decision_threshold']})")
+    print(
+        f"Model: {metadata['selected_model']} (artifact sha256 "
+        f"{metadata['artifact']['sha256'][:12]}..., threshold {metadata['decision_threshold']})"
+    )
     print(predictions.to_string(index=False))
     if args.output:
         predictions.to_csv(args.output, index=False)

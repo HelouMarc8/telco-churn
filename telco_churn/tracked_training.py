@@ -48,7 +48,8 @@ KEY_PARAMS = {
     "random_forest": ["n_estimators", "max_depth", "min_samples_leaf", "max_features"],
 }
 REFERENCE_SIZE = 10
-CM_LABELS = [0, 1]  
+CM_LABELS = [0, 1]
+
 
 def confusion_matrix_figure(metrics, title):
     matrix = [[metrics["tn"], metrics["fp"]], [metrics["fn"], metrics["tp"]]]
@@ -94,21 +95,25 @@ def run_candidate(name, classifier, data, context, allocation_path):
     X_train, y_train, X_valid, y_valid, train_ds, valid_ds, reference_batch = data
     with mlflow.start_run(run_name=RUN_NAMES[name]) as run:
         params = classifier.get_params()
-        mlflow.log_params({
-            "model_type": type(classifier).__name__,
-            "candidate": name,
-            "split_seed": SEED,
-            "threshold": THRESHOLD,
-            "random_state": params.get("random_state"),
-            "n_features": len(features),
-            **{k: params[k] for k in KEY_PARAMS[name]},
-        })
-        mlflow.set_tags({
-            "git_commit": context["code"]["commit"],
-            "git_uncommitted_changes": str(context["code"]["uncommitted_changes"]),
-            "data_sha256": context["data"]["source_sha256"],
-            "split_allocation_sha256": context["split"]["allocation_sha256"],
-        })
+        mlflow.log_params(
+            {
+                "model_type": type(classifier).__name__,
+                "candidate": name,
+                "split_seed": SEED,
+                "threshold": THRESHOLD,
+                "random_state": params.get("random_state"),
+                "n_features": len(features),
+                **{k: params[k] for k in KEY_PARAMS[name]},
+            }
+        )
+        mlflow.set_tags(
+            {
+                "git_commit": context["code"]["commit"],
+                "git_uncommitted_changes": str(context["code"]["uncommitted_changes"]),
+                "data_sha256": context["data"]["source_sha256"],
+                "split_allocation_sha256": context["split"]["allocation_sha256"],
+            }
+        )
         mlflow.log_input(train_ds, context="training")
         mlflow.log_input(valid_ds, context="validation")
 
@@ -118,21 +123,28 @@ def run_candidate(name, classifier, data, context, allocation_path):
         fit_seconds = time.perf_counter() - start
 
         metrics = evaluate_model(pipeline, X_valid, y_valid, threshold=THRESHOLD)
-        mlflow.log_metrics({
-            "val_average_precision": metrics["average_precision"],
-            "val_precision": metrics["precision"],
-            "val_recall": metrics["recall"],
-            "val_f1": metrics["f1"],
-            "val_accuracy": metrics["accuracy"],
-            **{f"val_{k}": metrics[k] for k in ("tn", "fp", "fn", "tp")},
-            "fit_seconds": fit_seconds,
-        })
+        mlflow.log_metrics(
+            {
+                "val_average_precision": metrics["average_precision"],
+                "val_precision": metrics["precision"],
+                "val_recall": metrics["recall"],
+                "val_f1": metrics["f1"],
+                "val_accuracy": metrics["accuracy"],
+                **{f"val_{k}": metrics[k] for k in ("tn", "fp", "fn", "tp")},
+                "fit_seconds": fit_seconds,
+            }
+        )
 
-        mlflow.log_figure(confusion_matrix_figure(metrics, RUN_NAMES[name]),
-                          "validation_confusion_matrix.png")
+        mlflow.log_figure(
+            confusion_matrix_figure(metrics, RUN_NAMES[name]), "validation_confusion_matrix.png"
+        )
         mlflow.log_dict(
-            {"labels_order": CM_LABELS, "rows": "true", "columns": "predicted",
-             "matrix": [[metrics["tn"], metrics["fp"]], [metrics["fn"], metrics["tp"]]]},
+            {
+                "labels_order": CM_LABELS,
+                "rows": "true",
+                "columns": "predicted",
+                "matrix": [[metrics["tn"], metrics["fp"]], [metrics["fn"], metrics["tp"]]],
+            },
             "validation_confusion_matrix.json",
         )
         mlflow.log_dict(build_provenance(name, classifier, context), "provenance.json")
@@ -157,9 +169,11 @@ def run_candidate(name, classifier, data, context, allocation_path):
             "reference/reference_predictions.csv",
         )
 
-        print(f"{RUN_NAMES[name]:<24} run {run.info.run_id}  "
-              f"AP={metrics['average_precision']:.3f}  recall={metrics['recall']:.3f}  "
-              f"F1={metrics['f1']:.3f}  model={model_info.model_uri}")
+        print(
+            f"{RUN_NAMES[name]:<24} run {run.info.run_id}  "
+            f"AP={metrics['average_precision']:.3f}  recall={metrics['recall']:.3f}  "
+            f"F1={metrics['f1']:.3f}  model={model_info.model_uri}"
+        )
         return run.info.run_id, pipeline
 
 
@@ -181,8 +195,11 @@ def main():
         allocation_path = Path(tmp) / "split_allocation.csv"
         split_allocation(train_df, valid_df, test_df).to_csv(allocation_path, index=False)
         context = {
-            "data": {"source_path": str(DATA_PATH), "source_sha256": file_sha256(DATA_PATH),
-                     "rows": len(df)},
+            "data": {
+                "source_path": str(DATA_PATH),
+                "source_sha256": file_sha256(DATA_PATH),
+                "rows": len(df),
+            },
             "split": {
                 "seed": SEED,
                 "method": "stratified on Churn, 60/20/20 train/valid/test",

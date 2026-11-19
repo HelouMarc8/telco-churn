@@ -13,6 +13,8 @@ from telco_churn.prediction import ARTIFACT, METADATA, load_model, predict, prep
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture(autouse=True)
 def run_from_project_root(monkeypatch):
@@ -81,10 +83,14 @@ def test_predict_does_not_change_learned_state(splits, saved):
     _, _, valid_df, _ = splits
     pipeline, metadata = saved
     num = pipeline.named_steps["preprocessor"].named_transformers_["num"]
-    encoder = pipeline.named_steps["preprocessor"].named_transformers_["cat"].named_steps["encoder"]
-    before = (num.named_steps["imputer"].statistics_.copy(),
-              num.named_steps["scaler"].mean_.copy(),
-              copy.deepcopy(encoder.categories_))
+    encoder = (
+        pipeline.named_steps["preprocessor"].named_transformers_["cat"].named_steps["encoder"]
+    )
+    before = (
+        num.named_steps["imputer"].statistics_.copy(),
+        num.named_steps["scaler"].mean_.copy(),
+        copy.deepcopy(encoder.categories_),
+    )
 
     predict(pipeline, valid_df, metadata["decision_threshold"])
 
@@ -151,10 +157,18 @@ def test_reference_batch_has_no_labels():
 
 def test_fresh_process_reload_matches_training_predictions():
     result = subprocess.run(
-        [sys.executable, "-m", "telco_churn.prediction",
-         "--input", "models/reference_batch.csv",
-         "--check", "models/reference_predictions.csv"],
-        cwd=PROJECT_ROOT, capture_output=True, text=True,
+        [
+            sys.executable,
+            "-m",
+            "telco_churn.prediction",
+            "--input",
+            "models/reference_batch.csv",
+            "--check",
+            "models/reference_predictions.csv",
+        ],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
     )
     print(result.stdout)
     assert result.returncode == 0, result.stdout + result.stderr

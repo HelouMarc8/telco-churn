@@ -50,7 +50,13 @@ def check_disjoint_splits(train_df, valid_df, test_df, n_customers):
 
 
 def split_allocation(train_df, valid_df, test_df):
-    return pd.concat([
-        pd.DataFrame({"customerID": d["customerID"], "split": name})
-        for name, d in (("train", train_df), ("valid", valid_df), ("test", test_df))
-    ]).sort_values("customerID").reset_index(drop=True)
+    return (
+        pd.concat(
+            [
+                pd.DataFrame({"customerID": d["customerID"], "split": name})
+                for name, d in (("train", train_df), ("valid", valid_df), ("test", test_df))
+            ]
+        )
+        .sort_values("customerID")
+        .reset_index(drop=True)
+    )

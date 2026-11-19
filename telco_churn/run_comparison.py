@@ -28,7 +28,9 @@ COLUMNS = {
 def resolve_commit(ref="HEAD"):
     return subprocess.run(
         ["git", "rev-parse", "--verify", f"{ref}^{{commit}}"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout.strip()
 
 
@@ -82,8 +84,10 @@ def main():
 
     shown = table[["run_id", "run_name", "average_precision", "recall", "f1", "decision"]]
     print(shown.round(3).to_string(index=False))
-    print(f"\nRule: highest val AP; within {AP_TOLERANCE} -> simplest model. "
-          f"Rule pick: {rule_pick}. Selected: {selected}  (commit {commit[:7]})")
+    print(
+        f"\nRule: highest val AP; within {AP_TOLERANCE} -> simplest model. "
+        f"Rule pick: {rule_pick}. Selected: {selected}  (commit {commit[:7]})"
+    )
     print(f"Saved {OUTPUT}")
 
 

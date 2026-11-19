@@ -21,7 +21,9 @@ def selected_run_id(comparison=COMPARISON):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Register the selected run's model and set the alias.")
+    parser = argparse.ArgumentParser(
+        description="Register the selected run's model and set the alias."
+    )
     parser.add_argument("--run-id", help="source run (default: selected run in the CSV)")
     args = parser.parse_args()
 

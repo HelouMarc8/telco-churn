@@ -13,7 +13,7 @@ authors = [
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
-    
+
 ]
 dependencies = [
     "joblib>=1.6.0",
@@ -21,9 +21,7 @@ dependencies = [
     "mlflow>=3,<4",
     "pandas>=3.1.0",
     "pip",
-    "pytest",
     "python-dotenv",
-    "ruff",
     "scikit-learn>=1.9.1",
 ]
 requires-python = "~=3.12.0"
@@ -32,12 +30,27 @@ requires-python = "~=3.12.0"
 [tool.ruff]
 line-length = 99
 src = ["telco_churn"]
-include = ["pyproject.toml", "telco_churn/**/*.py"]
+include = ["pyproject.toml", "telco_churn/**/*.py", "tests/**/*.py"]
 
 [tool.ruff.lint]
-extend-select = ["I"]  # Add import sorting
+select = ["E4", "E7", "E9", "F", "I"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["telco_churn"]
 force-sort-within-sections = true
 
+[dependency-groups]
+dev = [
+    "pre-commit>=4.7.0",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.5",
+]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not integration'"
+markers = [
+    "integration: uses the real Telco CSV and saved TP02 artifacts (run with -m integration)",
+]

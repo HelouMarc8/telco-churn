@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
-import json
 from importlib.metadata import version
+import json
+from pathlib import Path
 import platform
 import subprocess
 import sys
-from pathlib import Path
 
 import joblib
 
@@ -42,9 +42,11 @@ def git_identity():
         commit = subprocess.run(
             ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
         ).stdout.strip()
-        dirty = bool(subprocess.run(
-            ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
-        ).stdout.strip())
+        dirty = bool(
+            subprocess.run(
+                ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
+            ).stdout.strip()
+        )
         return {"commit": commit, "uncommitted_changes": dirty}
     except (OSError, subprocess.CalledProcessError):
         return {"commit": None, "uncommitted_changes": None}
@@ -67,7 +69,7 @@ def preprocessing_settings(pipeline):
         "categorical_encoder": type(p["preprocessor__cat__encoder"]).__name__,
         "unknown_category_policy": p["preprocessor__cat__encoder__handle_unknown"],
         "total_charges_parsing": "whitespace-only -> NaN (then imputed); other non-numeric "
-                                 "text raises ValueError. Done before the pipeline.",
+        "text raises ValueError. Done before the pipeline.",
     }
 
 
@@ -106,7 +108,7 @@ def main():
         "artifact": {"path": str(ARTIFACT), "sha256": file_sha256(ARTIFACT)},
         "selected_model": selected,
         "selection_rule": f"highest validation average precision; within {AP_TOLERANCE} "
-                          "-> simplest model",
+        "-> simplest model",
         "model_class": type(pipeline.named_steps["classifier"]).__name__,
         "model_params": json.loads(selected_row["params"]),
         "preprocessing": preprocessing_settings(pipeline),
@@ -116,15 +118,20 @@ def main():
             "identifier_not_a_feature": "customerID",
             "target_not_a_feature": "Churn",
         },
-        "input_schema": {**{c: "float (blank allowed)" if c == "TotalCharges" else "number"
-                            for c in numeric_features},
-                         **{c: "string" for c in categorical_features}},
+        "input_schema": {
+            **{
+                c: "float (blank allowed)" if c == "TotalCharges" else "number"
+                for c in numeric_features
+            },
+            **{c: "string" for c in categorical_features},
+        },
         "positive_class": "Churn = Yes -> 1",
         "decision_threshold": THRESHOLD,
         "validation_metrics": {
             k: float(selected_row[k])
             for k in ("average_precision", "precision", "recall", "f1", "accuracy")
-        } | {k: int(selected_row[k]) for k in ("tn", "fp", "fn", "tp")},
+        }
+        | {k: int(selected_row[k]) for k in ("tn", "fp", "fn", "tp")},
         "fit_seconds": float(selected_row["fit_seconds"]),
         "comparison_table": "reports/model_comparison.csv",
         "data": {

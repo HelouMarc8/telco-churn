@@ -1,6 +1,6 @@
 import json
-import time
 from pathlib import Path
+import time
 
 import pandas as pd
 from sklearn.dummy import DummyClassifier
@@ -51,7 +51,10 @@ def evaluate_model(model, X, y, threshold=THRESHOLD):
         "recall": recall_score(y, predictions, zero_division=0),
         "f1": f1_score(y, predictions, zero_division=0),
         "accuracy": accuracy_score(y, predictions),
-        "tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp),
+        "tn": int(tn),
+        "fp": int(fp),
+        "fn": int(fn),
+        "tp": int(tp),
     }
 
 
@@ -72,13 +75,15 @@ def compare_models(X_train, y_train, X_valid, y_valid):
         fit_seconds = time.perf_counter() - start
 
         metrics = evaluate_model(candidate, X_valid, y_valid)
-        rows.append({
-            "model": name,
-            **metrics,
-            "fit_seconds": round(fit_seconds, 4),
-            "threshold": THRESHOLD,
-            "params": json.dumps(classifier.get_params(), default=str),
-        })
+        rows.append(
+            {
+                "model": name,
+                **metrics,
+                "fit_seconds": round(fit_seconds, 4),
+                "threshold": THRESHOLD,
+                "params": json.dumps(classifier.get_params(), default=str),
+            }
+        )
         fitted[name] = candidate
 
     results = pd.DataFrame(rows).sort_values("average_precision", ascending=False)
@@ -88,18 +93,23 @@ def compare_models(X_train, y_train, X_valid, y_valid):
 def save_comparison(results, selected, n_train, n_valid):
     REPORT_DIR.mkdir(exist_ok=True)
     results.to_csv(REPORT_DIR / "model_comparison.csv", index=False)
-    (REPORT_DIR / "model_selection.json").write_text(json.dumps({
-        "selected_model": selected,
-        "rule": f"highest validation average precision; within {AP_TOLERANCE} -> simplest "
+    (REPORT_DIR / "model_selection.json").write_text(
+        json.dumps(
+            {
+                "selected_model": selected,
+                "rule": f"highest validation average precision; within {AP_TOLERANCE} -> simplest "
                 f"by {COMPLEXITY_ORDER}",
-        "positive_class": "Churn = Yes (1)",
-        "threshold": THRESHOLD,
-        "split_seed": SEED,
-        "features": features,
-        "evaluated_on": "validation only (test reserved)",
-        "n_train": n_train,
-        "n_valid": n_valid,
-    }, indent=2))
+                "positive_class": "Churn = Yes (1)",
+                "threshold": THRESHOLD,
+                "split_seed": SEED,
+                "features": features,
+                "evaluated_on": "validation only (test reserved)",
+                "n_train": n_train,
+                "n_valid": n_valid,
+            },
+            indent=2,
+        )
+    )
 
 
 def main():

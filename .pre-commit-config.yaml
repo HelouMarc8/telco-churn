@@ -1,0 +1,20 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.5
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        types_or: [python, pyi]
+        files: ^(telco_churn|tests)/
+      - id: ruff-format
+        types_or: [python, pyi]
+        files: ^(telco_churn|tests)/
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        files: ^(telco_churn|tests)/|\.(toml|yaml|yml)$
+      - id: end-of-file-fixer
+        files: ^(telco_churn|tests)/|\.(toml|yaml|yml)$
+      - id: check-yaml
+      - id: check-toml

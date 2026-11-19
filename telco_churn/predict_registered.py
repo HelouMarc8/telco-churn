@@ -17,8 +17,9 @@ MODEL_URI = f"models:/{REGISTERED_MODEL}@{ALIAS}"
 def main():
     parser = argparse.ArgumentParser(description="Predict churn with the registered model alias.")
     parser.add_argument("--input", default="models/reference_batch.csv")
-    parser.add_argument("--check", action="store_true",
-                        help="compare with the source run's reference predictions")
+    parser.add_argument(
+        "--check", action="store_true", help="compare with the source run's reference predictions"
+    )
     args = parser.parse_args()
 
     mlflow.set_tracking_uri(TRACKING_URI)
@@ -31,8 +32,10 @@ def main():
     new_customers = pd.read_csv(args.input)
     predictions = predict(pipeline, new_customers, threshold)
 
-    print(f"Loaded {MODEL_URI} -> version {version.version} "
-          f"(source run {version.run_id}, {run.info.run_name}, threshold {threshold})")
+    print(
+        f"Loaded {MODEL_URI} -> version {version.version} "
+        f"(source run {version.run_id}, {run.info.run_name}, threshold {threshold})"
+    )
     print(predictions.to_string(index=False))
 
     if args.check:
