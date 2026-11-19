@@ -228,7 +228,7 @@ wrong threshold rule; that is caught by a separate assertion in
 `test_churn_probability_is_the_positive_class_column`. Coverage finds untested code; it does not
 prove tested code is correct.
 
-**Still uncovered and worth a test next:** `prediction.check_against_reference` (lines 61–79), the
+**Still uncovered and worth a test next:** `prediction.check_against_reference` (lines 46–57), the
 reload agreement check. A useful test would write a reference CSV to `tmp_path` and assert that a
 probability changed by more than the tolerance makes it return `False`.
 
